@@ -1,4 +1,5 @@
 # \<hwcrypto-button\>
+[![Published on webcomponents.org](https://img.shields.io/badge/webcomponents.org-published-blue.svg)](https://www.webcomponents.org/element/ainvaltin/hwcrypto-button) [![Bower version](https://img.shields.io/bower/v/id-kaart-button.svg)](http://bower.io/search/?q=hwcrypto-button)
 
 `hwcrypto-button` is Polymer 2 element which wraps [hwcrypto.js](https://github.com/hwcrypto/hwcrypto.js) library into easy to reuse button.
 Basically it is [`paper-button`](https://www.webcomponents.org/element/@polymer/paper-button) with predefined `on-tap` handler which fires events at key points. This helps to break one huge chain of Promises into smaller, easier to understand pieces.
