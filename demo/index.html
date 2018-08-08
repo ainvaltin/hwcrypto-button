@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>hwcrypto-button demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+    <link rel="import" href="../../iron-icon/iron-icon.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+
+    <link rel="import" href="../hwcrypto-button.html">
+
+    <custom-style>
+      <style is="custom-style" include="demo-pages-shared-styles">
+      </style>
+      <style>
+         .paramRow {
+            padding-bottom: 8px;
+         }
+         hwcrypto-button {
+           padding-right: 20px;
+         }
+      </style>
+    </custom-style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+
+      <h3>hwcrypto-button with default values</h3>
+      <demo-snippet>
+        <template>
+          <hwcrypto-button></hwcrypto-button>
+          <hwcrypto-button raised></hwcrypto-button>
+        </template>
+      </demo-snippet>
+
+      <h3>Set button's content inline</h3>
+      <demo-snippet>
+        <template>
+          <hwcrypto-button><i>Sign</i></hwcrypto-button>
+
+          <hwcrypto-button raised>
+             <iron-icon icon="fingerprint"></iron-icon> Sign
+          </hwcrypto-button>
+        </template>
+      </demo-snippet>
+
+      <h3>Set button's default image size</h3>
+      <demo-snippet>
+        <template>
+          <hwcrypto-button
+             class="big"
+             action="SIGN"
+             title="Allkirjasta ID-kaardiga">
+          </hwcrypto-button>
+
+          <style is="custom-style">
+             hwcrypto-button.big {
+                --default-img-width: 300px;
+             }
+          </style>
+        </template>
+      </demo-snippet>
+
+      <h3>Configure button's appearance</h3>
+      <demo-snippet>
+        <template>
+          <hwcrypto-button id="cfgDemo"></hwcrypto-button>
+        </template>
+        <div class="vertical-section-container centered" style="padding-bottom: 20px;">
+          <div class="paramRow">
+            <label for="lbl">label</label>
+            <input id="lbl" type="text"></input>
+          </div>
+          <div class="paramRow">
+            <label for="ras">raised</label>
+            <input id="ras" type="checkbox"></input>
+          </div>
+          <div class="paramRow">
+            <label for="dis">disabled</label>
+            <input id="dis" type="checkbox"></input>
+          </div>
+        </div>
+      </demo-snippet>
+
+      <h3>Set hwcrypto parameters</h3>
+      <demo-snippet>
+        <template>
+          <hwcrypto-button id="btn" raised></hwcrypto-button>
+        </template>
+        <div class="vertical-section-container centered" style="padding-bottom: 20px;">
+           <div class="paramRow">
+           <label for="lang">Language</label>
+           <select id="lang">
+              <option value="et" selected>eesti</option>
+              <option value="en">English</option>
+              <option value="ru">русский</option>
+              <option value="lt">lietuviešu</option>
+              <option value="lv">latvijas</option>
+              <option value="sw">Swahili</option>
+           </select>
+           </div>
+           <!-- -->
+           <div class="paramRow">
+           <label for="action">Action</label>
+           <select id="action">
+              <option value="AUTH" selected>Authenticate (PIN 1)</option>
+              <option value="SIGN">Sign (PIN 2)</option>
+           </select>
+           </div>
+           <!-- -->
+           <div class="paramRow">
+              <label for="algo">Hash</label>
+              <select id="algo">
+                 <option value="SHA-1">SHA-1</option>
+                 <option value="SHA-224">SHA-224</option>
+                 <option value="SHA-256" selected>SHA-256</option>
+                 <option value="SHA-384">SHA-384</option>
+                 <option value="SHA-512">SHA-512</option>
+                 <option value="SHA-192">SHA-192 (erronoeus)</option>
+              </select>
+           </div>
+           <!-- -->
+           <div class="paramRow">
+           <label for="info">Info</label>
+           <input id="info" type="text"></input>
+           </div>
+        </div>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
+
+<script>
+const hashes = {
+  'SHA-1'   : 'c33df55b8aee82b5018130f61a9199f6a9d5d385',
+  'SHA-192' : 'ad41e82bcff23839dc0d9683d46fbae0be3dfcbbb1b49c70',
+  'SHA-224' : '614eadb55ecd6c4938fe23a450edd51292519f7ffb51e91dc8aa5fbe',
+  'SHA-256' : '413140d54372f9baf481d4c54e2d5c7bcf28fd6087000280e07976121dd54af2',
+  'SHA-384' : '71839e04e1f8c6e3a6697e27e9a7b8aff24c95358ea7dc7f98476c1e4d88c67d65803d175209689af02aa3cbf69f2fd3',
+  'SHA-512' : 'c793dc32d969cd4982a1d6e630de5aa0ebcd37e3b8bd0095f383a839582b080b9fe2d00098844bd303b8736ca1000344c5128ea38584bbed2d77a3968c7cdd71'
+};
+
+function setupDemoBtns(){
+   document.querySelectorAll('hwcrypto-button').forEach(btn => {
+
+     btn.addEventListener('hwcrypto-sign', function(e){
+       console.log('sign:', e.detail);
+       var algo = e.detail.hash;
+       if(btn.id == "btn") {
+          e.detail.hash = document.querySelector('#algo').value;
+          e.detail.lang = document.querySelector('#lang').value;
+          e.detail.prompt = document.querySelector('#info').value;
+          e.detail.action = document.querySelector('#action').value;
+          algo = e.detail.hash;
+       }
+       var hash = window.prompt(algo+" hash to sign", hashes[algo]);
+       if (!hash) e.preventDefault();
+       e.detail.value = hash;
+     });
+
+     btn.addEventListener('hwcrypto-signed', function(e){
+       console.log('signed:', e.detail);
+       alert('Signed:\n'+e.detail);
+     });
+
+     btn.addEventListener('hwcrypto-error', function(e){
+       console.error(e);
+       alert('hwcrypto failed with error: '+e.detail);
+     });
+
+   });
+
+   //
+   document.querySelectorAll('#lbl').forEach(elm => {elm.oninput = btnCfgChanged;});
+   document.querySelectorAll('#ras, #dis').forEach(elm => {elm.onchange = btnCfgChanged;});
+}
+
+function btnCfgChanged(e) {
+   var btn = document.querySelector('#cfgDemo');
+   switch (e.target.id) {
+     case "lbl":
+       btn.innerHTML = e.target.value;
+       break;
+     case "ras":
+       btn.raised = e.target.checked;
+       break;
+     case "dis":
+       btn.disabled = e.target.checked;
+       break;
+     default:
+       console.log(e);
+   }
+}
+
+
+if(window.attachEvent) {
+  window.attachEvent('onload', setupDemoBtns);
+} else {
+  if(window.onload) {
+      var curronload = window.onload;
+      var newonload = function(evt) {
+          curronload(evt);
+          setupDemoBtns(evt);
+      };
+      window.onload = newonload;
+  } else {
+      window.onload = setupDemoBtns;
+  }
+}
+
+</script>

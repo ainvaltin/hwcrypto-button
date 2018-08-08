@@ -1,0 +1,279 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../polymer/lib/utils/flattened-nodes-observer.html">
+
+<script src="../hwcrypto/hwcrypto.js"></script>
+
+<!--
+`hwcrypto-button` is Polymer 2 element which wraps [hwcrypto.js](https://github.com/hwcrypto/hwcrypto.js)
+library into easy to reuse button.
+Basically it is [`paper-button`](https://www.webcomponents.org/element/@polymer/paper-button)
+with predefined `on-tap` handler which fires events at key points. This helps to break one huge chain
+of Promises into smaller, easier to understand pieces.
+
+The button's default caption, text "ID-kaart", is svg image extracted from the official
+image on the [Insignia and reference](https://www.id.ee/?lang=en&id=35768) of the
+Estonian eID page. It is shown only when there is no inline content inside `<hwcrypto-button>` tag.
+
+## Usage
+Add the `<hwcrypto-button>` tag into your html and listen for events it generates:
+[`hwcrypto-sign`](#/elements/hwcrypto-button#event-hwcrypto-sign),
+[`hwcrypto-signed`](#/elements/hwcrypto-button#event-hwcrypto-signed) and
+[`hwcrypto-validated`](#/elements/hwcrypto-button#event-hwcrypto-validated).
+
+Events do have their `detail` property set to object with following properties:
+
+Property | Type | Default | Description
+---------|------|---------|-------------
+`action` | String | 'AUTH' | which certificate to use, must be either 'AUTH' or 'SIGN'.
+`lang` | String | 'et' | language code for hwcrypto UI (ISO 639-1).
+`info` | String | '' | additional information to show for the user in hwcrypto UI.
+`hash` | String | 'SHA-256' | hash algorithm with which **value** is created.
+`value` &sup1; | String or Uint8Array |  | hash value which is signed. If it is a string it must be "hex value" (ie only contains characters [0..9,a..f,A..F]).
+`cert` | Object | | certificate whose PK is used for signing the value.
+`signature` | Object | | signature over **value** with the PK of the **cert**.
+`valid` &sup1; | Boolean | false | wether the signature is valid
+
+&sup1; in the appropriate event (see below) Promise which resolves to value of correct type may be assigned to the property.
+
+In the following table `R` menas that the property is readable (ie it has a value
+assigned when the event is fired) and `W` means that value of the property can be changed.
+The `hwcrypto` column lists the function and parameter in the hwcrypto library where
+the property value is used:
+
+Property | hwcrypto-sign | hwcrypto-signed | hwcrypto
+---------|---------------|-----------------|----------
+`action` | R/W | R | `getCertificate(filter)`
+`lang` | R/W | R | `getCertificate(lang); sign(options.lang)`
+`info` | R/W | R | `sign(options.info)`
+`hash` | R/W | R | `sign(hash.type)`
+`value` | W | R | `sign(hash.hex or hash.value)`
+`cert` | | R | returned by [`getCertificate()`](https://github.com/hwcrypto/hwcrypto.js/wiki/API#getcertificate)
+`signature` | | R | returned by [`sign()`](https://github.com/hwcrypto/hwcrypto.js/wiki/API#sign)
+`valid` | | W |
+
+In the `hwcrypto-validated` event all properties are readable and should have value assigned to them.
+
+See also [hwcrypto API wiki](https://github.com/hwcrypto/hwcrypto.js/wiki/API) for use cases
+and possible values for some of the properties.
+
+### Styling
+The following custom properties and mixins are also available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--default-img-width` | Width of the default image | `84px`
+`--default-img-height` | Height of the default image | `18.75px`
+
+It is recommended to use either `--default-img-width` or `--default-img-height`,
+but not both &mdash; when only one is used the other dimension is scaled automatically so that correct
+aspect ratio is preserved.
+When using these properties to achieve "perfect layout" keep in mind that the button will be slightly bigger than the image.
+
+@customElement
+@polymer
+@demo demo/index.html
+-->
+
+<dom-module id="hwcrypto-button">
+  <template>
+    <style>
+    #defaultBtnImg {
+     width: var(--default-img-width);
+     height: var(--default-img-height);
+    }
+    </style>
+    <paper-button id="btn" on-tap="_onClick" title="[[title]]" raised$="[[raised]]" disabled$="[[disabled]]">
+      <slot id="c"></slot>
+      <img id="defaultBtnImg" alt="[[title]]" hidden$="[[_hideDefaultImg]]" src="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4NC4wMjciIGhlaWdodD0iMTguNzUiPjxkZWZzPjxjbGlwUGF0aCBpZD0iYSI+PHBhdGggZD0iTTAgNTYwaDk2MFYwSDB2NTYweiIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNhKSIgdHJhbnNmb3JtPSJtYXRyaXgoMS4yNSAwIDAgLTEuMjUgLTU1OC43NSA0MDYuMjUpIj48cGF0aCBkPSJNNDYwLjYwMyAzMTQuMjI3aC0xLjMwNmwtLjAxNSA2LjU0NWgxLjRzMi45MDYuMjMyIDIuOTA2LTMuMTg4YzAtMy40Mi0yLjk4NC0zLjM1Ny0yLjk4NC0zLjM1N20xLjQ5MiAxMC41MjRoLTUuOTM4Yy0yLjAyMiAwLTIuMDg0LTEuNTctMi4wODQtMS45MjYgMC0uMzYtLjAzMS03LjMwOC0uMDMxLTEwLjEwNyAwLTIuNjU4IDIuNDI1LTIuNDU2IDIuNDI1LTIuNDU2aDUuMzE4YzYuNzQ3IDAgNy4xODIgNS4zMTggNy4xODIgNi43Nzh2MS4xMmMtLjIzMyA1Ljc5OS00Ljk2IDYuNTktNi44NzIgNi41OU00NDcgMzE3LjYzbDUuNDEgMi4xNDctLjAzMS03LjI5NXMuMDc4LTIuNDgyLTIuNjU4LTIuNDgyYy0yLjczNyAwLTIuNzE1IDIuMzEtMi43MTUgMi4zMWwtLjAwNiA1LjMyeiIgZmlsbD0iIzJkNWY5YiIvPjxwYXRoIGQ9Ik00NTIuNDEgMzIxLjU0OGwtNS40MS0yLjE0Ni4wMzEgMy4xMTdzLS4wNzggMi40OCAyLjY1OCAyLjQ4YzIuNzM3IDAgMi43MTUtMi4zMSAyLjcxNS0yLjMxbC4wMDYtMS4xNDF6IiBmaWxsPSIjZWI2NDBmIi8+PHBhdGggZD0iTTQ3MS43NTIgMzE3LjUyMWgzLjE1MnYtMS4xMDRoLTMuMTUydjEuMTA0ek00NzguNTAzIDMxNy41ODRoLS41NzZWMzEyLjRoLTEuMnYxMS4yMDFoMS4ydi01LjIxNmwuNTYuMjIzIDIuOTEyIDQuOTkzaDEuMzc2bC0yLjkyOC00LjgzMi0uNTYtLjUxMi42NTYtLjY0MSAzLjI0OC01LjIxNmgtMS41MmwtMy4xNjggNS4xODR6TTQ4Ni40OTggMzE2LjU3NmgyLjU1MmwtLjk3MyAzLjQ3OC0uMjk1IDEuNjloLS4wMzJsLS4zMTEtMS43MjMtLjk0MS0zLjQ0NXptMi44NC0xLjA0aC0zLjE1OGwtLjg5NC0zLjEzNmgtMS4xODRsMy4zNzYgMTEuMzc2aC42NTdsMy4zNzYtMTEuMzc2aC0xLjI2NWwtLjkwOCAzLjEzNnpNNDk0LjY1NyAzMTYuNTc2aDIuNTUybC0uOTczIDMuNDc4LS4yOTUgMS42OWgtLjAzMmwtLjMxLTEuNzIzLS45NDItMy40NDV6bTIuODQtMS4wNGgtMy4xNThsLS44OTQtMy4xMzZoLTEuMTg0bDMuMzc2IDExLjM3NmguNjU3bDMuMzc2LTExLjM3NmgtMS4yNjVsLS45MDggMy4xMzZ6TTUwMi4wOSAzMTguMzJoLjk2Yy42MDkgMCAxLjA5LjE4NyAxLjQ0LjU2MS4zNTMuMzczLjUzLjk0My41MyAxLjcxMSAwIC41ODYtLjE0OCAxLjA3Mi0uNDQxIDEuNDU3LS4yOTMuMzgzLS43MjcuNTc1LTEuMzAzLjU3NS0uMjE0IDAtLjQzNS0uMDA4LS42NjQtLjAyNGEyLjg3OCAyLjg3OCAwIDAgMS0uNTIxLS4wNzJ2LTQuMjA4em0tMS4xOTggNS4xNjhhOC4xMyA4LjEzIDAgMCAwIDEuMTU5LjE4NWMuNDIyLjAzNy44MDkuMDU1IDEuMTYuMDU1LjQxNiAwIC44MS0uMDUgMS4xODUtLjE1Mi4zNzMtLjEwMi42OTgtLjI3Mi45NzUtLjUxMi4yNzgtLjI0LjQ5OS0uNTU1LjY2NC0uOTQ0LjE2NS0uMzkuMjQ4LS44NzcuMjQ4LTEuNDY0IDAtLjg4Ni0uMTgzLTEuNTk1LS41NTEtMi4xMjhhMi42NjQgMi42NjQgMCAwIDAtMS40NjQtMS4wNzJsLjYwNy0uNTkyIDIuMjA4LTQuNDY0aC0xLjM5MWwtMi40MDEgNC44OC0xLjIuMjR2LTUuMTJoLTEuMnYxMS4wODh6TTUxNC4yMjIgMzIyLjQ5NmgtMi43NTJWMzEyLjRoLTEuMnYxMC4wOTZoLTIuNzUydjEuMTA0aDYuNzA0di0xLjEwNHoiIGZpbGw9IiMyNTUzOGUiLz48L2c+PC9zdmc+" />
+    </paper-button>
+  </template>
+
+  <script>
+    class HwcryptoButton extends Polymer.Element {
+      static get is() { return 'hwcrypto-button'; }
+      static get properties() {
+        return {
+          /** Which certificate to use for signing (and thus which PIN user is asked to enter!), must be either `SIGN` or `AUTH`. */
+          action: {
+            type: String,
+            value: 'AUTH'
+         }
+         ,
+         /** Additional info to show in dialog for the user. */
+         info: String
+         ,
+         /** Language code for UI (ISO 639-1). */
+         lang: {
+            type: String,
+            value: 'et'
+         }
+         ,
+         /** Hash algorithm with which the signed hash is generated. */
+         hash: {
+            type: String,
+            value: 'SHA-256'
+         }
+         ,
+         /** Tooltip to show when hovering mouse cursor over the button. Default is "ID-kaart". */
+         title: String
+         ,
+         /** If true, the button should be styled with a shadow. */
+         raised: {
+            type: Boolean,
+            reflectToAttribute: true,
+            value: false
+         }
+         ,
+         disabled: {
+            type: Boolean,
+            reflectToAttribute: true,
+            value: false
+         }
+         ,
+         /** Wether to show the default image or not. The state is managed by the element. */
+         _hideDefaultImg: {
+           type: Boolean,
+           value: false
+         }
+        };
+      }
+
+      ready() {
+         super.ready();
+         new Polymer.FlattenedNodesObserver(this.$.c, info => {this._updateDefaultImgVisibility();});
+         //
+         if (!window.hwcrypto.use('auto')) {
+           console.error('hwcrypto-button: hwcrypto failed to select backend');
+         }
+      }
+
+      _updateDefaultImgVisibility(){
+         var c = this.$.c.assignedNodes().find(node => {
+           switch (node.nodeType) {
+             case Node.TEXT_NODE:
+               return node.nodeValue.trim() != "";
+             case Node.ELEMENT_NODE:
+               return node.id != "defaultBtnImg";
+           }
+           return false;
+         });
+         this._hideDefaultImg = !!c;
+      }
+
+      _onClick(e) {
+         this.$.btn.disabled = true;
+         var data = {action: this.action, lang: this.lang, hash: this.hash, info: this.info};
+         if(!this.dispatchEvent(new CustomEvent('hwcrypto-sign', {cancelable: true, detail: data}))) {
+            this.$.btn.disabled = false;
+            return;
+         }
+         /*if (!data.value) {
+            this.dispatchEvent(new CustomEvent('hwcrypto-error', {detail: Error('no_hash_to_sign')}));
+            this.$.btn.disabled = false;
+            return;
+         }*/
+         // NB! if data.value is Promise and resolving it involves GUI then it might
+         // interfere with GUI for selecting the cert?
+         Promise.all([
+           window.hwcrypto.getCertificate({lang: data.lang, filter: data.action}),
+           data.value
+         ])
+         .then(
+            (values) => {
+               data.cert = values[0];
+               data.value = values[1];
+               // must do an extra check here because typeof null === 'object'
+               if (!data.value) throw new Error('no_hash_to_sign');
+               let hash = {type: data.hash};
+               switch (typeof data.value) {
+                  case "string":
+                     hash.hex = data.value;
+                     break;
+                  case "object":
+                     if (data.value instanceof Uint8Array) {
+                       hash.value = data.value;
+                       break;
+                     }
+                  default:
+                     console.error('Unknown hash data type:', typeof data.value, data.value);
+                     throw new Error('unknown_hash_data_type');
+               }
+               return window.hwcrypto.sign(data.cert, hash, {lang: data.lang, info: data.info});
+            }
+         )
+         .then(
+            (signature) => {
+               data.signature = signature;
+               data.valid = false;
+               this.dispatchEvent(new CustomEvent('hwcrypto-signed', {detail: data}));
+               return Promise
+                  .resolve(data.valid)
+                  .catch((err) => {throw err});
+            }
+         )
+         .then(
+           (valid) => {
+             data.valid = valid;
+             this.dispatchEvent(new CustomEvent('hwcrypto-validated', {detail: data}));
+           }
+         )
+         .catch((err) => {this.dispatchEvent(new CustomEvent('hwcrypto-error', {detail: err}))})
+         .then(() => {this.$.btn.disabled = false;});
+      }
+
+      /**
+       * Fired before `hwcrypto.sign()` will be called. Use this event to initialize and/or change parameters of the signing action.
+       *
+       * In this event the `detail.value` property must be set to the value which will be signed. It can be a Promise which resolves to
+       * the value to be signed.
+       *
+       * Call `event.preventDefault()` to cancel signing.
+       *
+       * @event hwcrypto-sign
+       * @param {Object} detail
+       */
+
+      /**
+       * Fired after sucessful signing. Use this event to send signature and cert to the backend for
+       * validation and assign the result of it to the `detail.valid` property. This value may be
+       * Promise which resolves to Boolean.
+       *
+       * To cancel the signing proccess just set the `detail.valid` to `false`.
+       *
+       * If in the `hwcrypto-sign` event `value` was assigned an Promise then in this event the `value` has a resolved value of that Promise.
+       *
+       * @event hwcrypto-signed
+       * @param {Object} detail parameters used for signing.
+       */
+
+      /**
+       * Fired after `hwcrypto-signed` with `valid` property resolved. Use this event to log the user in or create
+       * signed data container according to the value of the `valid` property.
+       *
+       * @event hwcrypto-validated
+       * @param {Object} detail parameters used for signing.
+       */
+
+      /**
+       * Fired when signing action failed.
+       *
+       * Possible errors are documented in [hwcrypto wiki](https://github.com/hwcrypto/hwcrypto.js/wiki/API#error-handling).
+       * In addition to those error codes listed by hwcrypto following are used by the component:
+       *
+       * Error code | Description
+       * -----------|------------
+       * `no_hash_to_sign` | the value property is unassigned.
+       * `unknown_hash_data_type` | the value property type is something other than String or Uint8Array.
+       *
+       * If user code throws an error while handling an event fired by the component it too should end up in this event.
+       *
+       * @event hwcrypto-error
+       * @param {Error} detail Error returneb by hwcrypto lib.
+       */
+
+    }
+
+    window.customElements.define(HwcryptoButton.is, HwcryptoButton);
+  </script>
+</dom-module>
