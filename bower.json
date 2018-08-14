@@ -2,6 +2,16 @@
   "name": "hwcrypto-button",
   "description": "Polymer 2 element which wraps hwcrypto.js library into easy to reuse button",
   "main": "hwcrypto-button.html",
+  "keywords": [
+     "hwcrypto",
+     "button",
+     "material design",
+     "polymer",
+     "web-components"
+ ],
+  "authors": [
+     "Ain Valtin"
+ ],
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0",
     "paper-button": "PolymerElements/paper-button#^2.1.1",
@@ -16,5 +26,6 @@
   "resolutions": {
     "polymer": "^2.0.0",
     "iron-doc-viewer": "^3.0.0"
-  }
+  },
+  "license": "MIT"
 }
