@@ -1,5 +1,5 @@
 # \<hwcrypto-button\>
-[![Published on webcomponents.org](https://img.shields.io/badge/webcomponents.org-published-blue.svg)](https://www.webcomponents.org/element/ainvaltin/hwcrypto-button) [![Bower version](https://img.shields.io/bower/v/id-kaart-button.svg)](http://bower.io/search/?q=hwcrypto-button)
+[![Published on webcomponents.org](https://img.shields.io/badge/webcomponents.org-published-blue.svg)](https://www.webcomponents.org/element/ainvaltin/hwcrypto-button) [![Bower version](https://img.shields.io/bower/v/hwcrypto-button.svg)](http://bower.io/search/?q=hwcrypto-button)
 
 `hwcrypto-button` is Polymer 2 element which wraps [hwcrypto.js](https://github.com/hwcrypto/hwcrypto.js) library into easy to reuse button.
 Basically it is [`paper-button`](https://www.webcomponents.org/element/@polymer/paper-button) with predefined `on-tap` handler which fires events at key points. This helps to break one huge chain of Promises into smaller, easier to understand pieces.
@@ -47,12 +47,13 @@ Then in the script section of your page define functions `onIdKaartSign`, `onIdK
    action: 'AUTH',
    lang: 'et',
    hash: 'SHA-256',
-   cert: null,
    value: null,
-   signature: null,
+   cert: {encoded: null, hex: ''},
+   signature: {value: null, hex: ''},
    valid: false
 }
 ```
+The `cert` and `signature` objects are defined by the [hwcrypto API](https://github.com/hwcrypto/hwcrypto.js/wiki/API).
 
 ### `hwcrypto-sign` event
 The `hwcrypto-sign` event is fired before any data is sent to the hwcrypto lib and that's where you can set up the data to send to it.
